@@ -11,47 +11,49 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import re
 
+def match_array(iterator,type):
+    matches = []
+    for x in iterator:
+        matches.append([x,type])
+    return matches
+
+def sortFunc(x):
+    return x[0].span()[0]+x[0].span()[1]*0.1
+
+def format_tokens(tokens):
+    final_tokens = []
+    for token in tokens:
+        if token[1]=='reserved word':
+         final_tokens.append([token[0].group(2),token[1]])
+        else:
+         final_tokens.append([token[0].group(1),token[1]])
+    return final_tokens
+
 def scan_to_tokens(lines):
-    comment = 0
-    objects = []
+    comment = re.sub("[{][^{}]*[}]", " ", lines)
+    lines = comment.split('\n')
     tokens = []
     for line in lines:
-        objects.extend(line.split(' '))
-    for object in objects:
-        start_comment = re.search('^{', object)
-        end_comment = re.search('}$', object)
-        if (start_comment):
-            comment = 1
-        if (end_comment):
-            comment = 0
-        if (comment == 0):
-            if (object.find('{') != -1 and object.find('{') != 0):
-                object = object[0:object.find('{')]
-                comment = 1
-            if (
-                    object == 'if' or object == 'then' or object == 'else' or object == 'end' or object == 'repeat' or object == 'until' or object == 'read' or object == 'write'):
-                tokens.append(['Reserved Word', object])
-                continue
-            elif (
-                    object == '+' or object == '-' or object == '*' or object == '/' or object == '=' or object == '<' or object == '>' or object == '(' or object == ')' or object == ';' or object == ':='):
-                tokens.append(['Special Symbol', object])
-                continue
-            identifier = re.search('[a-zA-z]+;?', object)
-            number = re.search('[0-9]+;?', object)
-            if (identifier):
-                if (object[len(object) - 1] == ';'):
-                    tokens.append(['identifier', object[0:len(object) - 1]])
-                    tokens.append(['Special Symbol', ';'])
-                else:
-                    tokens.append(['identifier', object])
-            elif (number):
-                if (object[len(object) - 1] == ';'):
-                    tokens.append(['number', object[0:len(object) - 1]])
-                    tokens.append(['Special Symbol', ';'])
-                else:
-                    tokens.append(['number', object])
-    print(tokens)
-    return tokens
+        reserved_words_iterator = re.finditer(r"(\W|^)(read|if|then|else|end|repeat|until|write)(\W|$)", line)
+        list_of_reserved_words_matches = match_array(reserved_words_iterator, 'reserved word')
+
+        identifiers_iterator = re.finditer(r"(\b(?!(?:read|if|then|else|end|repeat|until|write)\b)[a-zA-Z]+)", line)
+        list_of_identifiers_matches = match_array(identifiers_iterator, 'identifier')
+
+        numbers_iterator = re.finditer('([0-9]+)', line)
+        list_of_numbers_matches = match_array(numbers_iterator, 'number')
+
+        symbols_iterator = re.finditer('(:=|-|=|;|[+*/<>()])', line)
+        list_of_symbols_matches = match_array(symbols_iterator, 'special symbol')
+
+        list_of_reserved_words_matches.extend(list_of_identifiers_matches)
+        list_of_reserved_words_matches.extend(list_of_numbers_matches)
+        list_of_reserved_words_matches.extend(list_of_symbols_matches)
+        list_of_reserved_words_matches.sort(key=sortFunc)
+        tokens.extend(list_of_reserved_words_matches)
+
+    final_tokens = format_tokens(tokens)
+    return final_tokens
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -65,6 +67,9 @@ class Ui_MainWindow(object):
         self.pushButton = QtWidgets.QPushButton(self.centralwidget)
         self.pushButton.setGeometry(QtCore.QRect(420, 570, 100, 30))
         self.pushButton.setObjectName("pushButton")
+        self.pushButton2 = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButton2.setGeometry(QtCore.QRect(420, 500, 100, 30))
+        self.pushButton2.setObjectName("pushButton")
         self.textEdit = QtWidgets.QTextEdit(self.centralwidget)
         self.textEdit.setGeometry(QtCore.QRect(40, 50, 300, 550))
         self.textEdit.setObjectName("textEdit")
@@ -85,14 +90,21 @@ class Ui_MainWindow(object):
             text = scan_to_tokens(lines)
             for token in text:
                 self.textBrowser_2.append(str(token))
+            with open('outputFile.txt', 'w') as filehandle:
+                for token in text:
+                    filehandle.write('%s\n' % token)
+
+        def clear():
+            self.textBrowser_2.clear()
 
         self.pushButton.clicked.connect(output_tokens)
+        self.pushButton2.clicked.connect(clear)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.pushButton.setText(_translate("MainWindow", "Start"))
-
+        self.pushButton2.setText(_translate("MainWindow", "Clear"))
 
 if __name__ == "__main__":
     import sys
