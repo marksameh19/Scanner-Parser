@@ -1,5 +1,17 @@
 import re
 
+special_symbols = {
+    ';':"SEMICOLON",
+    ":=":"ASSIGN",
+    "<":"LESSTHAN",
+    "=":"EQUAL",
+    "+":"PLUS",
+    "-":"MINUS",
+    "*":"MULT",
+    "/":"DIV",
+    "(":"OPENBRACKET",
+    ")":"CLOSEDBRACKET"
+}
 
 def match_array(iterator, type):
     matches = []
@@ -15,9 +27,13 @@ def format_tokens(tokens):
     final_tokens = []
     for token in tokens:
         if token[1]=='reserved word':
-         final_tokens.append([token[0].group(2),token[1]])
+            token[1] = token[0].group(2).upper()
+            final_tokens.append([token[0].group(2),token[1]])
+        elif token[1] == 'special symbol' :
+            token[1] = special_symbols[token[0].group(1)]
+            final_tokens.append([token[0].group(1), token[1]])
         else:
-         final_tokens.append([token[0].group(1),token[1]])
+            final_tokens.append([token[0].group(1),token[1]])
     return final_tokens
 
 f = open("test.txt", 'r')
@@ -31,10 +47,10 @@ for line in lines:
 
     #identifiers_iterator = re.finditer('([a-zA-Z]+)', line)
     identifiers_iterator = re.finditer(r"(\b(?!(?:read|if|then|else|end|repeat|until|write)\b)[a-zA-Z]+)", line)
-    list_of_identifiers_matches = match_array(identifiers_iterator, 'identifier')
+    list_of_identifiers_matches = match_array(identifiers_iterator, 'identifier'.upper())
 
     numbers_iterator = re.finditer('([0-9]+)', line)
-    list_of_numbers_matches = match_array(numbers_iterator, 'number')
+    list_of_numbers_matches = match_array(numbers_iterator, 'number'.upper())
 
     symbols_iterator = re.finditer('(:=|-|=|;|[+*/<>()])', line)
     list_of_symbols_matches = match_array(symbols_iterator, 'special symbol')
@@ -48,4 +64,5 @@ for line in lines:
 final_tokens = format_tokens(tokens)
 with open('outputFile.txt', 'w') as filehandle:
     for token in final_tokens:
+        print(token)
         filehandle.write('%s\n' % token)
