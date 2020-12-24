@@ -80,8 +80,7 @@ class TinyScanner(object):
         final_tokens = format_tokens(tokens)
 
         finalFinalFinalList(self.code_list,self.tokens_list,final_tokens)
-        self.code_list = tokens_list
-        self.tokens_list = tokens_output
+
 
     def createOutputFile(self, filename):
         self.scan()
